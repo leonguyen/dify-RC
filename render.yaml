@@ -1,0 +1,69 @@
+services:
+  # 1) Dify API (backend)
+  - type: web
+    name: dify-api
+    env: docker
+    plan: standard
+    region: oregon
+    repo: https://github.com/langgenius/dify.git
+    branch: main
+    dockerCommand: |
+      cd docker && docker compose up api
+    healthCheckPath: /health
+    envVars:
+      - key: MODE
+        value: api
+      - key: DB_HOST
+        fromDatabase:
+          name: dify-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dify-postgres
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: dify-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dify-postgres
+          property: password
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dify-postgres
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: dify-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: dify-redis
+          type: redis
+          property: port
+      # Add all necessary Dify envs here (OPENAI_API_KEY, SECRET_KEY, etc.)
+
+  # 2) Dify Web (Next.js frontend)
+  - type: web
+    name: dify-web
+    env: node
+    plan: standard
+    region: oregon
+    repo: https://github.com/langgenius/dify.git
+    branch: main
+    buildCommand: |
+      cd web
+      pnpm install
+      pnpm run build
+    startCommand: |
+      cd web
+      pnpm run start --port=$PORT --host=0.0.0.0
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://dify-api.onrender.com  # replace with actual API URL
+      # copy needed variables from web/.env.example into Render env
+
